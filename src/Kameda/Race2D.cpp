@@ -517,37 +517,71 @@ void Race2D::getGoalSpeedMeterPos(int frame, f32 &pos) {
 }
 
 void Race2D::getStartLapPos(int player, int frame, f32 &pos) {
-    int mode = RaceMgr::getCurrentManager()->getRaceMode();
-    if (mode == 3 || mode == 4) {
-        if (frame > 9) {
-            frame = frame < 50 ? 10 : frame - 40;
+    int console_count = RaceMgr::getCurrentManager()->getConsoleNumber();
+    if (console_count == 3 || console_count == 4) {
+        if (frame >= 10) {
+            if (frame < 50) {
+                frame = 10;
+            } else {
+                frame -= 40;
+            }
         }
         if (frame < 0) {
-            pos = (player & 1) ? 1.0f : -1.0f;
+            pos = (player & 1) ? -140.0f : 140.0f;
         } else if (frame < 15) {
             f32 t = frame / 15.0f;
-            pos = (player & 1) ? 1.0f - t : -1.0f + t;
+            pos = (player & 1) ? -140.0f + 140.0f * t : 140.0f - 140.0f * t;
         } else {
             pos = 0.0f;
         }
     } else if (frame < 0) {
-        pos = -1.0f;
+        pos = 140.0f;
     } else if (frame < 15) {
-        pos = -1.0f + frame / 15.0f;
+        pos = 140.0f - 166.0f * frame / 15.0f;
     } else if (frame < 18) {
-        pos = 0.0f + (frame - 15) / 3.0f;
+        pos = 168.0f - 5.0f * (frame - 15) / 3.0f;
     } else if (frame < 21) {
-        pos = 1.0f + (frame - 18) / 3.0f;
+        pos = -3.0f + 3.0f * (frame - 18) / 3.0f;
     } else {
         pos = 0.0f;
     }
 }
 
-void Race2D::getGoalLapPos(int, f32 &) {}
+void Race2D::getGoalLapPos(int frame, f32 &pos) {
+    if (frame < 15) {
+        pos = -140.0f * frame / 15.0f;
+    } else {
+        pos = -140.0f;
+    }
+}
 
-void Race2D::getStartCharPos(int, int, f32 &) {}
+void Race2D::getStartCharPos(int frame, int player, f32 &pos) {
+    int t = frame - player * 4;
+    if (t < 0) {
+        pos = -140.0f;
+    } else if (t < 15) {
+        pos = -140.0f + 178.0f * t / 15.0f;
+    } else if (t < 21) {
+        pos = 38.0f + 3.0f * (t - 15) / 6.0f;
+    } else if (t < 24) {
+        pos = 17.0f + -17.0f * (t - 21) / 3.0f;
+    } else {
+        pos = 0.0f;
+    }
+}
 
-void Race2D::getGoalCharPos(int, int, f32 &) {}
+void Race2D::getGoalCharPos(int frame, int player, f32 &pos) {
+    if (player < 4) {
+        frame -= (3 - player) * 4;
+    }
+    if (frame < 0) {
+        pos = 0.0f;
+    } else if (frame < 15) {
+        pos = -140.0f * frame / 15.0f;
+    } else {
+        pos = -140.0f;
+    }
+}
 
 void Race2D::getThunderCharScale(int) {}
 

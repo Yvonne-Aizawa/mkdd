@@ -209,6 +209,10 @@ typedef enum {
 UARTError InitializeUART(UARTBaudRate baudRate);
 TRKResult TRKInitializeIntDrivenUART(unknown, unknown, unknown, void*);
 void usr_put_initialize();
+BOOL usr_puts_serial(const char* msg);
+BOOL GetTRKConnected(void);
+void SetTRKConnected(BOOL);
+void TRK_flush_cache(u32 addr, u32 length);
 void TRKTargetSetInputPendingPtr(void*);
 extern void* gTRKInputPendingPtr;
 

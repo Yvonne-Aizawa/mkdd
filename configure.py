@@ -475,7 +475,7 @@ config.libs = [
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/dispatch.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/msghndlr.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/support.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mutex_TRK.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Portable/mutex_TRK.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/notify.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/main_TRK.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Portable/mem_TRK.c"),

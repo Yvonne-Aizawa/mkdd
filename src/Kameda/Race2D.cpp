@@ -3,6 +3,8 @@
 #include "Kaneshige/RaceTime.h"
 #include "Kaneshige/RaceMgr.h"
 #include "mathHelper.h"
+#include "JSystem/JMath/JMath.h"
+#include "JSystem/JUtility/JUTAssert.h"
 
 
 Race2D *Race2D::mThis;
@@ -343,21 +345,103 @@ void Race2D::getAlphaAnmTA(int, u8 &) {}
 
 void Race2D::getBestTimeColor(int, JUTColor &, J2DPicture::TCornerColor &) {}
 
-void Race2D::getBestLapColor(int, JUTColor &) {}
+void Race2D::getBestLapColor(int frame, JUTColor &color) {
+    f32 rate = 0.5f + -0.5f * JMASCos((frame % 16) * 0xffff / 16);
+    color.set(255.0f * rate, 128.0f * rate, 255.0f * rate, 0);
+}
 
-void Race2D::drawMiniGame() {}
+void Race2D::drawMiniGame() {
+    switch (RaceMgr::getCurrentManager()->getRaceMode()) {
+    case BALLOON_BATTLE:
+        break;
+    case BOMB_BATTLE:
+        drawBomb();
+        mBombStart2D->draw();
+        break;
+    case ESCAPE_BATTLE:
+        drawEscape();
+        break;
+    }
+}
 
 void Race2D::drawBomb() {
     //KartChecker::getWinBombPoint() {}
 }
 
-void Race2D::getBombScale(int, int, int) {}
+f32 Race2D::getBombScale(int kart, int type, int idx) {
+    f32 scale = 0.0f;
+    if (isBombReach(kart)) {
+        switch (type) {
+        case 0:
+        case 1:
+            scale = 1.0f;
+            break;
+        case 2:
+            scale = 2.1f * (0.5f + -0.5f * JMASCos(mBombReachFrame[kart] * 0xffff / 36));
+            break;
+        }
+    } else {
+        int frame = mBombFrame[kart][idx];
+        if (frame < 20) {
+            switch (type) {
+            case 0:
+            case 1:
+                scale = 1.0f;
+                break;
+            case 2:
+                scale = 0.0f;
+                break;
+            }
+        } else if (frame - 21 < 11) {
+            switch (type) {
+            case 0:
+            case 1:
+                scale = 1.0f;
+                break;
+            case 2:
+                scale = 0.0f;
+                break;
+            }
+        } else if (frame - 21 < 16) {
+            scale = 1.0f + 1.5f * (frame - 32) / 5.0f;
+        } else if (frame - 21 < 20) {
+            scale = 2.5f + -2.0f * (frame - 37) / 4.0f;
+        } else if (frame - 21 < 24) {
+            scale = 0.5f + 0.5f * (frame - 41) / 4.0f;
+        } else {
+            scale = 1.0f;
+        }
+    }
+    return scale;
+}
 
-void Race2D::getReachBombScale(int, int) {}
+f32 Race2D::getReachBombScale(int frame, int type) {
+    f32 scale = 0.0f;
+    switch (type) {
+    case 0:
+        scale = getBombScale(frame, 0, 0);
+        break;
+    case 1:
+        scale = getBombScale(frame, 2, 0);
+        break;
+    default:
+#line 2762
+        JUT_ASSERT(0);
+        break;
+    }
+    return scale;
+}
 
 void Race2D::drawEscape() {}
 
-void Race2D::getStartShineTimeScale(int) {}
+f32 Race2D::getStartShineTimeScale(int frame) {
+    if (frame < 11) {
+        return 1.6f * frame / 11.0f;
+    } else if (frame < 14) {
+        return 1.6f + -0.6f * (frame - 11) / 3.0f;
+    }
+    return 1.0f;
+}
 
 void Race2D::drawCourse() {}
 
@@ -369,13 +453,25 @@ void Race2D::calcParticle() {}
 
 void Race2D::setLayoutData() {}
 
-void Race2D::calcMiniGame() {}
+void Race2D::calcMiniGame() {
+    switch (RaceMgr::getCurrentManager()->getRaceMode()) {
+    case BALLOON_BATTLE:
+        break;
+    case BOMB_BATTLE:
+        calcBomb();
+        mBombStart2D->calc();
+        break;
+    case ESCAPE_BATTLE:
+        calcEscape();
+        break;
+    }
+}
 
 void Race2D::calcBomb() {}
 
 void Race2D::getBombColor(JUTColor, JUTColor) {}
 
-void Race2D::isBombReach(int) {}
+bool Race2D::isBombReach(int) {}
 
 void Race2D::isBombWinner(int) {}
 
@@ -411,7 +507,9 @@ void Race2D::setEscapeColor(int) {}
 
 void Race2D::getTimeColor(JUTColor, JUTColor) {}
 
-void Race2D::startBombDemo() {}
+void Race2D::startBombDemo() {
+    mBombStart2D->start();
+}
 
 bool Race2D::isAlarm(int kart) {
     int status = J2DManager::getKart2Status(kart);
@@ -431,13 +529,30 @@ void Race2D::getItemInfo(int, int, int, f32 &, f32 &, f32 &) {}
 
 void Race2D::decideItem(int, u8, int &) {}
 
-void Race2D::calcLapInit() {}
+void Race2D::calcLapInit() {
+    Task::TCB *cb = mTask->mCurCB;
+    for (int i = 0; i < RaceMgr::getCurrentManager()->getStatusNumber(); i++) {
+        Task::TCB *lapCB = mTask->make(nullptr, 0x8000);
+        if (lapCB) {
+            lapCB->mExecIdx = i;
+            mTask->change(calcLap, lapCB);
+        }
+    }
+    cb->mRequestKill = true;
+}
 
 void Race2D::calcLap() {}
 
-void Race2D::lapInit() {}
+void Race2D::lapInit() {
+    mTask->mCurCB->_10 = 0;
+    mTask->change(lapMain, mTask->mCurCB);
+}
 
-void Race2D::lapMain() {}
+void Race2D::lapMain() {
+    Task::TCB *cb = mTask->mCurCB;
+    cb->_10++;
+    cb->mRequestKill = true;
+}
 
 void Race2D::lapTimeInit() {}
 
@@ -445,31 +560,52 @@ void Race2D::lapTimeMain() {}
 
 void Race2D::calcItem() {}
 
-void Race2D::itemStartInit() {}
+void Race2D::itemStartInit() {
+    mTask->mCurCB->_10 = 0;
+    Task::TCB *cb = mTask->mCurCB;
+    *(int *)&cb->_24 = 0;
+    cb->_2a[1] = 0;
+    mTask->change(itemStart, mTask->mCurCB);
+}
 
 void Race2D::itemStart() {}
 
-void Race2D::itemBlinkInit() {}
+void Race2D::itemBlinkInit() {
+    mTask->mCurCB->_10 = 0;
+    mTask->mCurCB->_2a[0] = 1;
+    mTask->change(itemBlink, mTask->mCurCB);
+}
 
 void Race2D::itemBlink() {}
 
-void Race2D::itemGetInit() {}
+void Race2D::itemGetInit() {
+    mTask->mCurCB->_10 = 0;
+    Task::TCB *cb = mTask->mCurCB;
+    *(int *)&cb->_24 = 0;
+    cb->_2a[1] = 1;
+    mTask->change(itemGetMain, mTask->mCurCB);
+}
 
 void Race2D::itemGetMain() {}
 
-void Race2D::itemSpecialInit() {}
+void Race2D::itemSpecialInit() {
+    mTask->mCurCB->_10 = 0;
+    mTask->change(itemSpecialMain, mTask->mCurCB);
+}
 
 void Race2D::itemSpecialMain() {}
 
 void Race2D::setUsisi(int, ECharID) {}
 
-void Race2D::alarmX(int, f32 &) {}
+void Race2D::alarmX(int kart, f32 &x) {
+    x = mAlarm[kart]._0 + mAlarm[kart]._8 / 2.0f;
+}
 
 void Race2D::getStartScaleA(int frame, f32 &scale) {
     int t = frame - 50;
     if (t < 0) {
         scale = 0.0f;
-    } else if (t < 11) {
+    } else if (frame - 21 < 11) {
         scale = 1.2f * t / 11.0f;
     } else if (t < 16) {
         scale = 1.2f + -0.5f * (frame - 61) / 5.0f;
@@ -484,7 +620,7 @@ void Race2D::getStartScaleB(int frame, f32 &scale) {
     int t = frame - 50;
     if (t < 0) {
         scale = 1.0f;
-    } else if (t < 11) {
+    } else if (frame - 21 < 11) {
         scale = 1.0f + 0.2f * t / 11.0f;
     } else if (t < 16) {
         scale = 1.2f + -0.5f * (frame - 61) / 5.0f;

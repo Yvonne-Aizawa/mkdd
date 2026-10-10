@@ -6,6 +6,7 @@
 #include "JSystem/J2D/J2DPicture.h"
 #include "JSystem/JKernel/JKRHeap.h"
 #include "JSystem/JORReflexible.h"
+#include "Kameda/BombStart2D.h"
 #include "Kameda/Task.h"
 #include "Kaneshige/HioMgr.h"
 
@@ -39,10 +40,10 @@ public:
     void getBestLapColor(int, JUTColor &);                                                // 0x8015a874
     void drawMiniGame();                                                                          // 0x8015a90c
     void drawBomb();                                                                              // 0x8015a978
-    void getBombScale(int, int, int);                                                             // 0x8015af3c
-    void getReachBombScale(int, int);                                                             // 0x8015b13c
+    f32 getBombScale(int, int, int);                                                              // 0x8015af3c
+    f32 getReachBombScale(int, int);                                                              // 0x8015b13c
     void drawEscape();                                                                            // 0x8015b1e8
-    void getStartShineTimeScale(int);                                                             // 0x8015b42c
+    f32 getStartShineTimeScale(int);                                                              // 0x8015b42c
     void drawCourse();                                                                            // 0x8015b4b8
     void calc();                                                                                  // 0x8015c7ec
     void calcPlayerMark();                                                                        // 0x8015cfdc
@@ -51,7 +52,7 @@ public:
     void calcMiniGame();                                                                          // 0x8015f688
     void calcBomb();                                                                              // 0x8015f6f4
     void getBombColor(JUTColor, JUTColor);                                        // 0x80160590
-    void isBombReach(int);                                                                        // 0x80160708
+    bool isBombReach(int);                                                                        // 0x80160708
     void isBombWinner(int);                                                                       // 0x80160864
     void setEffectPos(int);                                                                       // 0x80160980
     void calcEscape();                                                                            // 0x80160c14
@@ -136,7 +137,20 @@ public:
 
     void endBombDemo() { mIsEndBombDemo = true; }
 private:
-    PLACEHOLDER_BYTES(0, 0x4ebc);
+    struct AlarmInfo {
+        u32 _0;
+        u32 _4;
+        u32 _8;
+        u32 _c;
+    };
+
+    PLACEHOLDER_BYTES(0, 0x1c0);
+    BombStart2D *mBombStart2D; // 1c0
+    AlarmInfo mAlarm[4];       // 1c4
+    PLACEHOLDER_BYTES(0x204, 0xd70);
+    int mBombReachFrame[4];    // d70
+    int mBombFrame[4][4];      // d80
+    PLACEHOLDER_BYTES(0xdc0, 0x4ebc);
     int mHideFrame;  // 4ebc
     bool mDrawFlag; // 4ec0
     bool mIsEndBombDemo; // 4ec1

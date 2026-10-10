@@ -1,5 +1,7 @@
 #include "Kameda/Race2D.h"
+#include "Kameda/J2DManager.h"
 #include "Kaneshige/RaceTime.h"
+#include "Kaneshige/RaceMgr.h"
 #include "mathHelper.h"
 
 
@@ -383,7 +385,27 @@ void Race2D::calcEscape() {}
 
 void Race2D::calcTimeFrame(bool, int) {}
 
-J2DPicture::TCornerColor Race2D::getCornerColor(int) {}
+J2DPicture::TCornerColor Race2D::getCornerColor(int index) {
+    switch (index) {
+    case 0:
+        return J2DPicture::TCornerColor(0xffa0a0ff, 0xdc0000ff, 0xdc0000ff, 0xffa0a0ff);
+    case 1:
+        return J2DPicture::TCornerColor(0x40ffffff, 0x0000ffff, 0x0000ffff, 0x40ffffff);
+    case 2:
+        return J2DPicture::TCornerColor(0x96ff20ff, 0x006400ff, 0x006400ff, 0x96ff20ff);
+    case 3:
+        return J2DPicture::TCornerColor(0xffff32ff, 0x964000ff, 0x964000ff, 0xffff32ff);
+    case 4:
+        return J2DPicture::TCornerColor(0xff78ffff, 0x640064ff, 0x640064ff, 0xff78ffff);
+    case 5:
+        return J2DPicture::TCornerColor(0xffa028ff, 0x783200ff, 0x783200ff, 0xffa028ff);
+    case 6:
+        return J2DPicture::TCornerColor(0xdcffffff, 0x00c8ffff, 0x00c8ffff, 0xdcffffff);
+    case 7:
+        return J2DPicture::TCornerColor(0xb45affff, 0x3200c8ff, 0x3200c8ff, 0xb45affff);
+    }
+    return J2DPicture::TCornerColor();
+}
 
 void Race2D::setEscapeColor(int) {}
 
@@ -391,7 +413,13 @@ void Race2D::getTimeColor(JUTColor, JUTColor) {}
 
 void Race2D::startBombDemo() {}
 
-bool Race2D::isAlarm(int) {}
+bool Race2D::isAlarm(int kart) {
+    int status = J2DManager::getKart2Status(kart);
+    if (status < 0 || status >= RaceMgr::getCurrentManager()->getKartNumber()) {
+        return false;
+    }
+    return *(reinterpret_cast<const u8 *>(this) + 0x1e5d + status * 0x8e8);
+}
 
 void Race2D::getMapPos(int, JGeometry::TVec3f &, JGeometry::TVec2f &) {}
 
@@ -437,15 +465,83 @@ void Race2D::setUsisi(int, ECharID) {}
 
 void Race2D::alarmX(int, f32 &) {}
 
-void Race2D::getStartScaleA(int, f32 &) {}
+void Race2D::getStartScaleA(int frame, f32 &scale) {
+    int t = frame - 50;
+    if (t < 0) {
+        scale = 0.0f;
+    } else if (t < 11) {
+        scale = 1.2f * t / 11.0f;
+    } else if (t < 16) {
+        scale = 1.2f + -0.5f * (frame - 61) / 5.0f;
+    } else if (t < 20) {
+        scale = -0.2f + 0.7f * (t - 16) * 0.25f;
+    } else {
+        scale = 1.0f;
+    }
+}
 
-void Race2D::getStartScaleB(int, f32 &) {}
+void Race2D::getStartScaleB(int frame, f32 &scale) {
+    int t = frame - 50;
+    if (t < 0) {
+        scale = 1.0f;
+    } else if (t < 11) {
+        scale = 1.0f + 0.2f * t / 11.0f;
+    } else if (t < 16) {
+        scale = 1.2f + -0.5f * (frame - 61) / 5.0f;
+    } else if (t < 20) {
+        scale = -0.2f + 0.7f * (t - 16) * 0.25f;
+    } else {
+        scale = 1.0f;
+    }
+}
 
-void Race2D::getStartSpeedMeterScale(int, int, f32 &) {}
+void Race2D::getStartSpeedMeterScale(int frame, int player, f32 &scale) {
+    int t = frame - player * 4;
+    if (t < 0) {
+        scale = 0.0f;
+    } else if (t < 9) {
+        scale = 1.2f * t / 9.0f;
+    } else if (t < 13) {
+        scale = 1.2f - 0.2f * (t - 9) * 0.25f;
+    } else {
+        scale = 1.0f;
+    }
+}
 
-void Race2D::getGoalSpeedMeterPos(int, f32 &) {}
+void Race2D::getGoalSpeedMeterPos(int frame, f32 &pos) {
+    if (frame < 15) {
+        pos = 1.0f * frame / 15.0f;
+    } else {
+        pos = 1.0f;
+    }
+}
 
-void Race2D::getStartLapPos(int, int, f32 &) {}
+void Race2D::getStartLapPos(int player, int frame, f32 &pos) {
+    int mode = RaceMgr::getCurrentManager()->getRaceMode();
+    if (mode == 3 || mode == 4) {
+        if (frame > 9) {
+            frame = frame < 50 ? 10 : frame - 40;
+        }
+        if (frame < 0) {
+            pos = (player & 1) ? 1.0f : -1.0f;
+        } else if (frame < 15) {
+            f32 t = frame / 15.0f;
+            pos = (player & 1) ? 1.0f - t : -1.0f + t;
+        } else {
+            pos = 0.0f;
+        }
+    } else if (frame < 0) {
+        pos = -1.0f;
+    } else if (frame < 15) {
+        pos = -1.0f + frame / 15.0f;
+    } else if (frame < 18) {
+        pos = 0.0f + (frame - 15) / 3.0f;
+    } else if (frame < 21) {
+        pos = 1.0f + (frame - 18) / 3.0f;
+    } else {
+        pos = 0.0f;
+    }
+}
 
 void Race2D::getGoalLapPos(int, f32 &) {}
 

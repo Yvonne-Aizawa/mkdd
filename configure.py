@@ -680,7 +680,7 @@ config.libs = [
     DolphinLib(
         "odenotstub",
         [
-            Object(NonMatching, "dolphin/odenotstub/odenotstub.c")
+            Object(Matching, "dolphin/odenotstub/odenotstub.c")
         ]
     ),
     DolphinLib(

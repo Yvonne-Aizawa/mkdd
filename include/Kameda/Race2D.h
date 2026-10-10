@@ -93,7 +93,7 @@ public:
     void getGoalCharPos(int, int, f32 &);                                                       // 0x8016819c
     void getThunderCharScale(int);                                                                // 0x80168214
     void getStartRankPos(int, int, JGeometry::TVec2f &);                                    // 0x801682ec
-    void getRaceRankScale(int);                                                                   // 0x8016851c
+    f64 getRaceRankScale(int);                                                                     // 0x8016851c
     void getGoalRankPos(int, int, JGeometry::TVec2f &);                                     // 0x801685e4
     void getGoalRankScale(int, int, f32 &);                                                     // 0x801689e4
     void getGoalRankRot(int, f32 &);                                                            // 0x80168cb4

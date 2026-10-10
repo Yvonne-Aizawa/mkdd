@@ -134,9 +134,16 @@ void InitMetroTRK_BBA(void);
 void EnableMetroTRKInterrupts(void);
 
 void TRKDestructEvent(TRKEvent*);
+void TRKConstructEvent(TRKEvent*, int);
+TRKResult TRKPostEvent(TRKEvent*);
 TRKResult TRKDispatchMessage(TRKBuffer*);
 void* TRKGetBuffer(int);
 void TRKReleaseBuffer(int);
+TRKResult TRKGetFreeBuffer(int* bufIdx, TRKBuffer** buf);
+TRKResult TRKRequestSend(TRKBuffer* msg, int* bufIdx, u32 p1, u32 p2, int p3);
+TRKResult TRKDoNotifyStopped(int cmd);
+void TRKTargetAddStopInfo(TRKBuffer*);
+void TRKTargetAddExceptionInfo(TRKBuffer*);
 void TRKGetInput();
 BOOL TRKGetNextEvent(TRKEvent*);
 
@@ -168,6 +175,18 @@ TRKResult TRKInitializeDispatcher();
 TRKResult InitializeProgramEndTrap();
 TRKResult TRKInitializeSerialHandler();
 TRKResult TRKInitializeTarget();
+TRKResult TRKTerminateSerialHandler(void);
+void TRKProcessInput(int bufIdx);
+int TRKTestForPacket(void);
+int TRKPollUART(void);
+int TRKReadUARTN(void* bytes, u32 length);
+void TRK_board_display(char* str);
+
+/* File I/O */
+u8 TRKAccessFile(u8 command, u32 fileHandle, size_t* count, u8* buffer);
+u8 TRKOpenFile(void);
+u8 TRKCloseFile(void);
+u8 TRKPositionFile(void);
 
 /* EXI2 */
 void UnreserveEXI2Port(void);

@@ -59,6 +59,7 @@ public:
     JKRArchive *getArchive() const { return mArchive; }
 
     static J2DManager *getManager() { return mThis; }
+    static bool getNetFlag() { return mNetFlag; }
 
     static char *mKartNumberName[8]; // 0x80394378
     static int mKart2Status[8];      // 0x803fb9a0

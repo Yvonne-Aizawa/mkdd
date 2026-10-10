@@ -333,7 +333,16 @@ void Race2D::init() {}
 
 void Race2D::drawPlayerMark() {}
 
-void Race2D::drawMask() {}
+void Race2D::drawMask() {
+    if (RaceMgr::getCurrentManager()->getConsoleNumber() == 4 && RaceMgr::getCurrentManager()->getStatusNumber() == 3 &&
+        RaceMgr::getCurrentManager()->getRacePhase() != PHASE_CRS_DEMO && !J2DManager::getNetFlag()) {
+        mOrthoGraph->setPort();
+        if (RaceMgr::getCurrentManager()->isRaceEnd()) {
+            mMaskScreen->search('P3Mask')->setAlpha(255 - mHideFrame * 255 / 20);
+        }
+        mMaskScreen->draw(0.0f, 0.0f, mOrthoGraph);
+    }
+}
 
 void Race2D::draw() {}
 
@@ -341,9 +350,31 @@ void Race2D::drawAlarm() {}
 
 void Race2D::anmTA(int) {}
 
-void Race2D::getAlphaAnmTA(int, u8 &) {}
+void Race2D::getAlphaAnmTA(int frame, u8 &alpha) {
+    int t = frame % 41;
+    if (t < 11) {
+        alpha = 255;
+    } else if (t < 21) {
+        alpha = 255.0f - (t - 11) * 255 / 10.0f;
+    } else if (t < 31) {
+        alpha = (t - 21) * 255 / 10.0f;
+    } else {
+        alpha = 255;
+    }
+}
 
-void Race2D::getBestTimeColor(int, JUTColor &, J2DPicture::TCornerColor &) {}
+void Race2D::getBestTimeColor(int frame, JUTColor &color, J2DPicture::TCornerColor &corner) {
+    f32 rate = 0.5f + -0.5f * JMASCos((frame % 16) * 0xffff / 16);
+    color.set(255.0f * rate, 110.0f * rate, 0, 0);
+    corner.mColor0.r = corner.mColor3.r = 255;
+    corner.mColor0.g = corner.mColor3.g = 255;
+    corner.mColor0.b = corner.mColor3.b = 127.0f * rate + 128.0f;
+    corner.mColor0.a = corner.mColor3.a = 255;
+    corner.mColor1.r = corner.mColor2.r = 177.0f * rate + 78.0f;
+    corner.mColor1.g = corner.mColor2.g = 255.0f * rate;
+    corner.mColor1.b = corner.mColor2.b = 128.0f * rate;
+    corner.mColor1.a = corner.mColor2.a = 255;
+}
 
 void Race2D::getBestLapColor(int frame, JUTColor &color) {
     f32 rate = 0.5f + -0.5f * JMASCos((frame % 16) * 0xffff / 16);
@@ -469,11 +500,35 @@ void Race2D::calcMiniGame() {
 
 void Race2D::calcBomb() {}
 
-void Race2D::getBombColor(JUTColor, JUTColor) {}
+JUTColor Race2D::getBombColor(JUTColor from, JUTColor to) {
+    f32 rate = 0.5f + -0.5f * JMASCos(mBombColorFrame * 0xffff / 50);
+    JUTColor color;
+    color.r = from.r + rate * (to.r - from.r);
+    color.g = from.g + rate * (to.g - from.g);
+    color.b = from.b + rate * (to.b - from.b);
+    color.a = from.a + rate * (to.a - from.a);
+    return color;
+}
 
-bool Race2D::isBombReach(int) {}
+bool Race2D::isBombReach(int status) {
+    int kart = J2DManager::getStatus2Kart(status);
+    RaceMgr::getCurrentManager()->getKartChecker(kart);
+    int winPoint = KartChecker::getWinBombPoint();
+    int point = RaceMgr::getCurrentManager()->getKartChecker(kart)->getBombPoint();
+    for (int i = 0; i < winPoint - 1; i++) {
+        if (mBombFrame[status][i] != 0) {
+            return false;
+        }
+    }
+    return winPoint - 1 == point;
+}
 
-void Race2D::isBombWinner(int) {}
+bool Race2D::isBombWinner(int status) {
+    int kart = J2DManager::getStatus2Kart(status);
+    RaceMgr::getCurrentManager()->getKartChecker(kart);
+    int winPoint = KartChecker::getWinBombPoint();
+    return RaceMgr::getCurrentManager()->getKartChecker(kart)->getBombPoint() == winPoint;
+}
 
 void Race2D::setEffectPos(int) {}
 
@@ -505,27 +560,51 @@ J2DPicture::TCornerColor Race2D::getCornerColor(int index) {
 
 void Race2D::setEscapeColor(int) {}
 
-void Race2D::getTimeColor(JUTColor, JUTColor) {}
+JUTColor Race2D::getTimeColor(JUTColor from, JUTColor to) {
+    f32 rate = 0.5f + -0.5f * JMASCos(mTimeColorFrame * 0xffff / 60);
+    JUTColor color;
+    color.r = from.r + rate * (to.r - from.r);
+    color.g = from.g + rate * (to.g - from.g);
+    color.b = from.b + rate * (to.b - from.b);
+    color.a = from.a + rate * (to.a - from.a);
+    return color;
+}
 
 void Race2D::startBombDemo() {
     mBombStart2D->start();
 }
 
 bool Race2D::isAlarm(int kart) {
+    bool alarm = false;
     int status = J2DManager::getKart2Status(kart);
-    if (status < 0 || status >= RaceMgr::getCurrentManager()->getKartNumber()) {
-        return false;
+    if (status >= 0 && status < RaceMgr::getCurrentManager()->getStatusNumber()) {
+        alarm = mStatus[status].mIsAlarm;
     }
-    return *(reinterpret_cast<const u8 *>(this) + 0x1e5d + status * 0x8e8);
+    return alarm;
 }
 
 void Race2D::getMapPos(int, JGeometry::TVec3f &, JGeometry::TVec2f &) {}
 
-void Race2D::getCharacterInfo(int, int, f32 &, f32 &, f32 &) {}
+void Race2D::getCharacterInfo(int type, int frame, f32 &a, f32 &b, f32 &c) {
+#line 4735
+    JUT_MINMAX_ASSERT(0, type, 2);
+    JUT_MINMAX_ASSERT(0, frame, 39);
+    a = mCharInfo[1 - type][frame]._0;
+    b = mCharInfo[1 - type][frame]._4;
+    c = mCharInfo[1 - type][frame]._8;
+}
 
 void Race2D::getCharacterClr(int, int, int, JUTColor &, JUTColor &, u8 &) {}
 
-void Race2D::getItemInfo(int, int, int, f32 &, f32 &, f32 &) {}
+void Race2D::getItemInfo(int status, int type, int frame, f32 &a, f32 &b, f32 &c) {
+#line 4863
+    JUT_MINMAX_ASSERT(0, status, 4);
+    JUT_MINMAX_ASSERT(0, type, 2);
+    JUT_MINMAX_ASSERT(0, frame, 39);
+    a = mItemInfo[status][type][frame]._0;
+    b = mItemInfo[status][type][frame]._4;
+    c = mItemInfo[status][type][frame]._8;
+}
 
 void Race2D::decideItem(int, u8, int &) {}
 
@@ -602,30 +681,28 @@ void Race2D::alarmX(int kart, f32 &x) {
 }
 
 void Race2D::getStartScaleA(int frame, f32 &scale) {
-    int t = frame - 50;
-    if (t < 0) {
+    if (frame - 50 < 0) {
         scale = 0.0f;
-    } else if (frame - 21 < 11) {
-        scale = 1.2f * t / 11.0f;
-    } else if (t < 16) {
-        scale = 1.2f + -0.5f * (frame - 61) / 5.0f;
-    } else if (t < 20) {
-        scale = -0.2f + 0.7f * (t - 16) * 0.25f;
+    } else if (frame - 50 < 11) {
+        scale = 1.2f * (frame - 50) / 11.0f;
+    } else if (frame - 50 < 16) {
+        scale = 1.2f + (0.7f - 1.2f) * (frame - 61) / 5.0f;
+    } else if (frame - 50 < 20) {
+        scale = 0.7f + (1.0f - 0.7f) * (frame - 66) / 4.0f;
     } else {
         scale = 1.0f;
     }
 }
 
 void Race2D::getStartScaleB(int frame, f32 &scale) {
-    int t = frame - 50;
-    if (t < 0) {
+    if (frame - 50 < 0) {
         scale = 1.0f;
-    } else if (frame - 21 < 11) {
-        scale = 1.0f + 0.2f * t / 11.0f;
-    } else if (t < 16) {
-        scale = 1.2f + -0.5f * (frame - 61) / 5.0f;
-    } else if (t < 20) {
-        scale = -0.2f + 0.7f * (t - 16) * 0.25f;
+    } else if (frame - 50 < 11) {
+        scale = 1.0f + (1.2f - 1.0f) * (frame - 50) / 11.0f;
+    } else if (frame - 50 < 16) {
+        scale = 1.2f + (0.7f - 1.2f) * (frame - 61) / 5.0f;
+    } else if (frame - 50 < 20) {
+        scale = 0.7f + (1.0f - 0.7f) * (frame - 66) / 4.0f;
     } else {
         scale = 1.0f;
     }
@@ -646,9 +723,9 @@ void Race2D::getStartSpeedMeterScale(int frame, int player, f32 &scale) {
 
 void Race2D::getGoalSpeedMeterPos(int frame, f32 &pos) {
     if (frame < 15) {
-        pos = 1.0f * frame / 15.0f;
+        pos = -182.0f * frame / 15.0f;
     } else {
-        pos = 1.0f;
+        pos = -182.0f;
     }
 }
 
@@ -727,7 +804,19 @@ void Race2D::getGoalCharPos(int frame, int player, f32 &pos) {
     }
 }
 
-void Race2D::getThunderCharScale(int) {}
+f32 Race2D::getThunderCharScale(int frame) {
+    f32 scale;
+    if (frame < 6) {
+        scale = 1.0f + (0.6f - 1.0f) * frame / 6.0f;
+    } else if (frame < 540) {
+        scale = 0.6f;
+    } else if (frame < 546) {
+        scale = 0.6f + (1.5f - 0.6f) * (frame - 540) / 6.0f;
+    } else {
+        scale = 1.5f + (1.0f - 1.5f) * (frame - 546) / 6.0f;
+    }
+    return scale;
+}
 
 void Race2D::getStartRankPos(int player, int frame, JGeometry::TVec2f &pos) {
     frame -= 20;
@@ -820,11 +909,11 @@ void Race2D::getStartLapTimePos(int frame, int player, f32 &pos) {
     if (t < 0) {
         pos = start;
     } else if (t < 15) {
-        pos = start + (-start * t) / 15.0f;
+        pos = start + -start * t / 15.0f;
     } else if (t < 19) {
-        pos = 3.0f * (t - 15) * 0.25f;
+        pos = 3.0f * (t - 15) / 4.0f;
     } else if (t < 22) {
-        pos = 3.0f - 3.0f * (t - 19) / 3.0f;
+        pos = 3.0f + -3.0f * (t - 19) / 3.0f;
     } else {
         pos = 0.0f;
     }

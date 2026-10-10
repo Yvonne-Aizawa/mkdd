@@ -102,14 +102,98 @@ typedef struct TRKState {
 	u32 _AC;
 } TRKState;
 
+#define TRKMSGBUF_SIZE 0x880
+
+/**
+ * @size{0x890}
+ */
 typedef struct TRKBuffer {
-	u8 _00[4];
-	u32 _04;
-	s32 _08;
-	u32 _0C;
-	u32 _10;
-	u8 mBuffer[0x87C]; /* _10 */
+	u32 mMutex;               // _00
+	BOOL mIsInUse;            // _04
+	u32 mLength;              // _08
+	u32 mPosition;            // _0C
+	u8 mData[TRKMSGBUF_SIZE]; // _10
 } TRKBuffer;
+
+/**
+ * Header shared by file I/O requests and their replies.
+ * @size{0x40}
+ */
+typedef struct TRKFileMessage {
+	u32 mLength;  // _00
+	u8 mCommand;  // _04
+	u8 _05[3];    // _05
+	union {
+		u32 mHandle;   // reply: position
+		u8 mOpenMode;
+	} _08;
+	union {
+		u16 mDataLength;
+		u32 mPosition;
+	} _0C;
+	union {
+		u8 mSeekMode;
+		u32 mIOResult; // reply
+	} _10;
+	u16 mReplyLength; // _14, reply
+	u8 _16[2];        // _16
+	u32 mReplyPosition; // _18, reply
+	u8 _1C[0x24];     // _1C
+} TRKFileMessage;
+typedef struct Default_PPC {
+	u32 GPR[32]; // _00
+	u32 PC;      // _80
+	u32 LR;      // _84
+	u32 CR;      // _88
+	u32 CTR;     // _8C
+	u32 XER;     // _90
+} Default_PPC;
+
+typedef struct Float_PPC {
+	f64 FPR[32]; // _00
+	u64 FPSCR;   // _100
+	u64 FPECR;   // _108
+} Float_PPC;
+
+typedef struct Extended1_PPC_6xx_7xx {
+	u32 SR[16];  // _00
+	u32 TBL;     // _40
+	u32 TBU;     // _44
+	u32 HID0;    // _48
+	u32 HID1;    // _4C
+	u32 MSR;     // _50
+	u32 PVR;     // _54
+	u32 IBAT0U;  // _58
+	u32 IBAT0L;  // _5C
+	u32 IBAT1U;  // _60
+	u32 IBAT1L;  // _64
+	u32 IBAT2U;  // _68
+	u32 IBAT2L;  // _6C
+	u32 IBAT3U;  // _70
+	u32 IBAT3L;  // _74
+	u32 DBAT0U;  // _78
+	u32 DBAT0L;  // _7C
+	u32 DBAT1U;  // _80
+	u32 DBAT1L;  // _84
+	u32 DBAT2U;  // _88
+	u32 DBAT2L;  // _8C
+	u32 DBAT3U;  // _90
+	u32 DBAT3L;  // _94
+	u8 _98[0x1F0]; // _98, remaining SPRs (not yet mapped)
+} Extended1_PPC_6xx_7xx;
+
+/**
+ * @size{0x430}
+ */
+typedef struct ProcessorState_PPC {
+	Default_PPC Default;             // _000
+	Float_PPC Float;                 // _098
+	Extended1_PPC_6xx_7xx Extended1; // _1A8
+} ProcessorState_PPC;
+
+extern ProcessorState_PPC gTRKCPUState;
+extern TRKState gTRKState;
+
 typedef enum { TRKSuccess = 0, TRKError100 = 0x100, TRKError301 = 0x301, TRKError302 = 0x302 } TRKResult;
 
 extern BOOL gTRKBigEndian;
@@ -155,9 +239,23 @@ TRKResult TRKTargetSupportRequest();
 
 TRKResult TRKAppendBuffer_ui8(TRKBuffer*, u8*, int);
 TRKResult TRKSetBufferPosition(TRKBuffer*, u32);
+TRKResult TRKReadBuffer_ui8(TRKBuffer*, u8*, int);
+TRKResult TRKReadBuffer_ui32(TRKBuffer*, u32*, int);
+TRKResult TRKReadBuffer1_ui64(TRKBuffer*, u64*);
+TRKResult TRKAppendBuffer_ui32(TRKBuffer*, const u32*, int);
+TRKResult TRKAppendBuffer1_ui64(TRKBuffer*, const u64);
+TRKResult TRKReadBuffer(TRKBuffer*, void*, size_t);
+TRKResult TRKAppendBuffer(TRKBuffer*, const void*, size_t);
+void TRKResetBuffer(TRKBuffer*, BOOL keepData);
+void OutputData(void* data, int length);
 
 TRKResult TRKMessageSend(TRK_Msg*);
 void TRKSwapAndGo(void);
+u32 __TRK_get_MSR(void);
+void TRKSaveExtended1Block(void);
+void TRK_main(void);
+int InitMetroTRKCommTable(int hwId);
+void EnableEXI2Interrupts(void);
 TRKResult TRKWriteUARTN(const void* bytes, u32 length);
 TRKResult TRKInitializeNub(void);
 TRKResult TRKTerminateNub(void);
@@ -172,7 +270,7 @@ void* TRK_memcpy(void* dst, const void* src, size_t n);
 TRKResult TRKInitializeEventQueue();
 TRKResult TRKInitializeMessageBuffers();
 TRKResult TRKInitializeDispatcher();
-TRKResult InitializeProgramEndTrap();
+void InitializeProgramEndTrap(void);
 TRKResult TRKInitializeSerialHandler();
 TRKResult TRKInitializeTarget();
 TRKResult TRKTerminateSerialHandler(void);
@@ -187,6 +285,28 @@ u8 TRKAccessFile(u8 command, u32 fileHandle, size_t* count, u8* buffer);
 u8 TRKOpenFile(void);
 u8 TRKCloseFile(void);
 u8 TRKPositionFile(void);
+
+/* Debugger communication */
+typedef int (*DBCommInitFunc)(volatile u8**, void*);
+typedef int (*DBCommFunc)(void);
+typedef int (*DBCommReadFunc)(u8*, int);
+typedef int (*DBCommWriteFunc)(const u8*, int);
+
+/**
+ * @size{0x28}
+ */
+typedef struct DBCommTable {
+	DBCommInitFunc initialize_func;  // _00
+	DBCommFunc initinterrupts_func;  // _04
+	DBCommFunc shutdown_func;        // _08
+	DBCommFunc peek_func;            // _0C
+	DBCommReadFunc read_func;        // _10
+	DBCommWriteFunc write_func;      // _14
+	DBCommFunc open_func;            // _18
+	DBCommFunc close_func;           // _1C
+	DBCommFunc pre_continue_func;    // _20
+	DBCommFunc post_stop_func;       // _24
+} DBCommTable;
 
 /* EXI2 */
 void UnreserveEXI2Port(void);

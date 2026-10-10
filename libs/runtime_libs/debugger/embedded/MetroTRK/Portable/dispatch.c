@@ -7,9 +7,9 @@ TRKResult TRKDispatchMessage(TRKBuffer* buf)
     TRKResult error = 0x500;
 
     TRKSetBufferPosition(buf, 0);
-    MWTRACE(1, "Dispatch command 0x%08x\n", buf->mBuffer[0]);
+    MWTRACE(1, "Dispatch command 0x%08x\n", buf->mData[4]);
 
-    switch (buf->mBuffer[0]) {
+    switch (buf->mData[4]) {
     case TRK_DISPATCH_CMD_CONNECT:
         error = TRKDoConnect(buf);
         break;

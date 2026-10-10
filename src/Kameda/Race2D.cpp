@@ -518,6 +518,7 @@ void Race2D::getGoalSpeedMeterPos(int frame, f32 &pos) {
 
 void Race2D::getStartLapPos(int player, int frame, f32 &pos) {
     int console_count = RaceMgr::getCurrentManager()->getConsoleNumber();
+    u32 player_bits = (u32)player;
     if (console_count == 3 || console_count == 4) {
         if (frame >= 10) {
             if (frame < 50) {
@@ -527,21 +528,28 @@ void Race2D::getStartLapPos(int player, int frame, f32 &pos) {
             }
         }
         if (frame < 0) {
-            pos = (player & 1) ? -140.0f : 140.0f;
+            if (((player & 1) ^ (player_bits >> 31)) == (player_bits >> 31)) {
+                pos = 140.0f;
+            } else {
+                pos = -140.0f;
+            }
         } else if (frame < 15) {
-            f32 t = frame / 15.0f;
-            pos = (player & 1) ? -140.0f + 140.0f * t : 140.0f - 140.0f * t;
+            if (((player & 1) ^ (player_bits >> 31)) == (player_bits >> 31)) {
+                pos = 140.0f - 140.0f * frame / 15.0f;
+            } else {
+                pos = -140.0f + 140.0f * frame / 15.0f;
+            }
         } else {
             pos = 0.0f;
         }
     } else if (frame < 0) {
         pos = 140.0f;
     } else if (frame < 15) {
-        pos = 140.0f - 166.0f * frame / 15.0f;
+        pos = 140.0f + 168.0f * frame / 15.0f;
     } else if (frame < 18) {
-        pos = 168.0f - 5.0f * (frame - 15) / 3.0f;
+        pos = 140.0f - 5.0f * (frame - 15) / 3.0f;
     } else if (frame < 21) {
-        pos = -3.0f + 3.0f * (frame - 18) / 3.0f;
+        pos = -3.0f + 2.0f * (frame - 18) / 3.0f;
     } else {
         pos = 0.0f;
     }
@@ -587,16 +595,73 @@ void Race2D::getThunderCharScale(int) {}
 
 void Race2D::getStartRankPos(int, int, JGeometry::TVec2f &) {}
 
-void Race2D::getRaceRankScale(int) {}
+f64 Race2D::getRaceRankScale(int rank) {
+    if (rank < 3) {
+        return (f64)(1.0f + (-0.3f * rank) / 3.0f);
+    } else if (rank < 6) {
+        return (f64)(-0.2f + (0.4f * (rank - 2)) / 3.0f);
+    } else {
+        return (f64)(1.1f + (0.7f * (rank - 4)) / 3.0f);
+    }
+}
 
 void Race2D::getGoalRankPos(int, int, JGeometry::TVec2f &) {}
 
 void Race2D::getGoalRankScale(int, int, f32 &) {}
 
-void Race2D::getGoalRankRot(int, f32 &) {}
+void Race2D::getGoalRankRot(int frame, f32 &rot) {
+    int t = frame - 128;
+    if (t < 0) {
+        rot = 0.0f;
+    } else if (t < 30) {
+        rot = -720.0f * t / 480.0f;
+    } else {
+        rot = 0.0f;
+    }
+}
 
-void Race2D::getStartLapTimePos(int, int, f32 &) {}
+void Race2D::getStartLapTimePos(int frame, int player, f32 &pos) {
+    int console_count = RaceMgr::getCurrentManager()->getConsoleNumber();
+    f32 start;
+    if (console_count == 1 || console_count == 2) {
+        start = 240.0f;
+    } else {
+        start = 480.0f;
+    }
+    int t = frame - player * 3;
+    if (t < 0) {
+        pos = start;
+    } else if (t < 15) {
+        pos = start + (-start * t) / 15.0f;
+    } else if (t < 19) {
+        pos = 3.0f * (t - 15) * 0.25f;
+    } else if (t < 22) {
+        pos = 3.0f - 3.0f * (t - 19) / 3.0f;
+    } else {
+        pos = 0.0f;
+    }
+}
 
-void Race2D::getGoalLapTimePos(int, int, f32 &) {}
+void Race2D::getGoalLapTimePos(int frame, int player, f32 &pos) {
+    int console_count = RaceMgr::getCurrentManager()->getConsoleNumber();
+    if (console_count == 1 || console_count == 2) {
+        if (frame - 128 < 210) {
+            int t = frame - 128 - player * 4;
+            if (t < 0) {
+                pos = 0.0f;
+            } else if (t < 20) {
+                pos = -217.0f * t / 20.0f;
+            } else {
+                pos = -217.0f;
+            }
+        } else if (frame - 338 < 15) {
+            pos = -217.0f + 454.0f * (frame - 338) / 15.0f;
+        } else {
+            pos = 237.0f;
+        }
+    } else {
+        pos = 0.0f;
+    }
+}
 
 #include "JSystem/JAUdio/JASFakeMatch2.h"

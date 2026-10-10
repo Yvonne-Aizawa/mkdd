@@ -1,6 +1,5 @@
 #include "PowerPC_EABI_Support/MetroTRK/trk.h"
 
-extern u8 gTRKCPUState[];
 extern u8 gTRKRestoreFlags[];
 
 asm void TRKSaveExtended1Block(void)

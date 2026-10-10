@@ -488,7 +488,7 @@ config.libs = [
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/dolphin_trk.c"),   
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/usr_put.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/dolphin_trk_glue.c"),
-            Object(NonMatching, "debugger/embedded/MetroTRK/Os/dolphin/targcont.c"),
+            Object(Matching, "debugger/embedded/MetroTRK/Os/dolphin/targcont.c"),
             Object(Matching, "debugger/embedded/MetroTRK/Os/dolphin/target_options.c"),
             Object(Matching, "debugger/embedded/MetroTRK/Os/dolphin/UDP_Stubs.c"),
             Object(NonMatching, "debugger/embedded/MetroTRK/Export/mslsupp.c"),

@@ -3,7 +3,9 @@
 
 #include "kartEnums.h"
 
+#include "JSystem/J2D/J2DGrafContext.h"
 #include "JSystem/J2D/J2DPicture.h"
+#include "JSystem/J2D/J2DScreen.h"
 #include "JSystem/JKernel/JKRHeap.h"
 #include "JSystem/JORReflexible.h"
 #include "Kameda/BombStart2D.h"
@@ -51,15 +53,15 @@ public:
     void setLayoutData();                                                                         // 0x8015da18
     void calcMiniGame();                                                                          // 0x8015f688
     void calcBomb();                                                                              // 0x8015f6f4
-    void getBombColor(JUTColor, JUTColor);                                        // 0x80160590
+    JUTColor getBombColor(JUTColor, JUTColor);                                      // 0x80160590
     bool isBombReach(int);                                                                        // 0x80160708
-    void isBombWinner(int);                                                                       // 0x80160864
+    bool isBombWinner(int);                                                                       // 0x80160864
     void setEffectPos(int);                                                                       // 0x80160980
     void calcEscape();                                                                            // 0x80160c14
     void calcTimeFrame(bool, int);                                                                // 0x80161114
     static J2DPicture::TCornerColor getCornerColor(int);                                          // 0x8016152c
     void setEscapeColor(int);                                                                     // 0x80161894
-    void getTimeColor(JUTColor, JUTColor);                                        // 0x80162844
+    JUTColor getTimeColor(JUTColor, JUTColor);                                      // 0x80162844
     void startBombDemo();                                                                         // 0x801629bc
     bool isAlarm(int);                                                                            // 0x801629e0
     void getMapPos(int, JGeometry::TVec3f &, JGeometry::TVec2f &);                    // 0x80162a40
@@ -92,7 +94,7 @@ public:
     void getGoalLapPos(int, f32 &);                                                             // 0x8016804c
     void getStartCharPos(int, int, f32 &);                                                      // 0x8016809c
     void getGoalCharPos(int, int, f32 &);                                                       // 0x8016819c
-    void getThunderCharScale(int);                                                                // 0x80168214
+    f32 getThunderCharScale(int);                                                                 // 0x80168214
     void getStartRankPos(int, int, JGeometry::TVec2f &);                                    // 0x801682ec
     f64 getRaceRankScale(int);                                                                     // 0x8016851c
     void getGoalRankPos(int, int, JGeometry::TVec2f &);                                     // 0x801685e4
@@ -144,13 +146,33 @@ private:
         u32 _c;
     };
 
-    PLACEHOLDER_BYTES(0, 0x1c0);
+    PLACEHOLDER_BYTES(0, 0x1b4);
+    J2DOrthoGraph *mOrthoGraph; // 1b4
+    PLACEHOLDER_BYTES(0x1b8, 0x1c0);
     BombStart2D *mBombStart2D; // 1c0
     AlarmInfo mAlarm[4];       // 1c4
-    PLACEHOLDER_BYTES(0x204, 0xd70);
+    PLACEHOLDER_BYTES(0x204, 0x234);
+    J2DScreen *mMaskScreen;    // 234
+    PLACEHOLDER_BYTES(0x238, 0xd68);
+    int mTimeColorFrame;       // d68
+    int mBombColorFrame;       // d6c
     int mBombReachFrame[4];    // d70
     int mBombFrame[4][4];      // d80
-    PLACEHOLDER_BYTES(0xdc0, 0x4ebc);
+    PLACEHOLDER_BYTES(0xdc0, 0x1588);
+    struct {
+        PLACEHOLDER_BYTES(0, 0x8d5);
+        bool mIsAlarm; // 8d5
+        PLACEHOLDER_BYTES(0x8d6, 0x8e8);
+    } mStatus[4];              // 1588
+    PLACEHOLDER_BYTES(0x3928, 0x392c);
+    struct CharInfo {
+        f32 _0;
+        f32 _4;
+        f32 _8;
+    };
+    CharInfo mItemInfo[4][2][39]; // 392c
+    CharInfo mCharInfo[2][39];    // 47cc
+    PLACEHOLDER_BYTES(0x4b74, 0x4ebc);
     int mHideFrame;  // 4ebc
     bool mDrawFlag; // 4ec0
     bool mIsEndBombDemo; // 4ec1
